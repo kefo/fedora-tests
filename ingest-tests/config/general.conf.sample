@@ -1,0 +1,14 @@
+## Server settings
+[host]
+    # app_env is either 'dev', 'test', 'staging' or 'prod'.
+    app_env = "dev"
+    log_config_file = config/logging.conf
+
+## Fedora
+[fcrepo]
+    # base must end in a slash
+    base = 
+    username = ""
+    password = ""
+    ssl_verify = true
+

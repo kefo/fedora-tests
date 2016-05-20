@@ -1,0 +1,63 @@
+[loggers]
+keys=root,ingest,stats
+
+[handlers]
+keys=generalHandler,statsHandler
+
+[formatters]
+keys=generalFormatter,statsFormatter
+
+
+## Loggers
+
+## Setting the root logger to DEBUG will significantly increase output.
+## It is recommended to set level to WARN in production systems.
+[logger_root]
+level=INFO
+handlers=generalHandler
+
+## Logs stats at the end of each process. Useful to keep in a separate file
+### or email to admins.
+[logger_ingest]
+#level=INFO
+qualname = ingest
+propagate = 0
+handlers = generalHandler
+
+## Logs stats at the end of each process. Useful to keep in a separate file
+### or email to admins.
+[logger_stats]
+#level=INFO
+qualname = stats
+propagate = 0
+handlers = statsHandler
+
+
+## Log handlers.
+[handler_generalHandler]
+class=handlers.RotatingFileHandler
+level = DEBUG
+formatter=generalFormatter
+## Change this to fit your system.
+args=('logs/debug.log', 'a', 10000000, 9)
+
+## Stats are saved in a daily file.
+[handler_statsHandler]
+class=handlers.TimedRotatingFileHandler
+level = INFO
+formatter=statsFormatter
+## Change this to fit your system.
+args=('logs/stats.log', 'D', 1, 9)
+
+
+## Log formatters.
+
+[formatter_generalFormatter]
+format=%(asctime)s %(levelname)s %(module)s:%(funcName)s:%(lineno)d - %(message)s
+datefmt=
+#class=logging.Formatter
+
+[formatter_statsFormatter]
+format=%(message)s
+datefmt=
+#class=logging.Formatter

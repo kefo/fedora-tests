@@ -1,0 +1,149 @@
+#!/usr/bin/env python
+
+import argparse
+import logging.config
+import os
+import sys
+import configparser
+
+import random
+import requests
+
+import datetime
+from time import gmtime, strftime
+
+from rdflib.graph import Graph
+from rdflib import Namespace, URIRef, Literal
+
+SKOS = Namespace("http://www.w3.org/2004/02/skos/core#")
+nsdict = dict(skos=SKOS)
+
+def fetchRDF(rdffile):
+    '''Open RDF file and modify URIs'''
+    rdf = ''
+    with open(rdffile) as f:
+        for line in f:
+            l = line.replace('%BASE%', config['fcrepo']['base'])
+            l = l.replace('%BASE_NOSLASH%', config['fcrepo']['base'][:-1])
+            rdf = rdf + l
+    return rdf
+    
+def loadGraph(rdf):
+    '''Load RDF into graph'''
+    g = Graph()
+    g.parse(data=rdf, format="xml")
+    return g
+    
+def getSubjects(g, limit):
+    '''SUBJECTS generator'''
+    # return g.subjects(SKOS.prefLabel, None)
+    q = "SELECT DISTINCT ?s WHERE { ?s <http://www.w3.org/2004/02/skos/core#prefLabel> ?o . }"
+    if int(limit) > 0:
+        q = q + " LIMIT " + limit
+    return g.query(q)
+    
+def logResponse(uri, status_code, count):
+    line = uri + ": " + str(status_code) + " (" + str(count) + ")"
+    if (status_code == 204):
+        logger.info(uri + ": " + str(status_code) + " (" + str(count) + ")")
+    elif (status_code == 404):
+        logger.warn(uri + ": " + str(status_code) + " (" + str(count) + ")")
+    elif (status_code == 201):
+        logger.info(uri + ": " + str(status_code) + " (" + str(count) + ")")
+    else:
+        logger.error(uri + ": " + str(status_code) + " (" + str(count) + ")")
+    print (uri + ": " + str(status_code) + " (" + str(count) + ")")
+
+def deleteResources(sourcefile):
+    global count
+    rdf = fetchRDF(sourcefile)
+    g = loadGraph(rdf)
+    subjects = getSubjects(g, 0)
+    for subject in subjects:
+        s = subject.s.__str__()
+        response = requests.delete(s)
+        count = count + 1
+        logResponse(s, response.status_code, count)
+        
+        response = requests.delete(s + "/fcr:tombstone")
+        logResponse(s + "/fcr:tombstone", response.status_code, count)
+        
+def insertResources(sourcefile, createRelations):
+    global count
+    rdf = fetchRDF(sourcefile)
+    g = loadGraph(rdf)
+    subjects = getSubjects(g, args.limit)
+    for subject in subjects:
+        s = subject.s.__str__()
+        #s = subject.s.__str__()
+        #q = "CONSTRUCT { <" + s + "> ?p ?o } WHERE { <" + s + "> ?p ?o }"
+        #d = g.query(q).serialize(format="xml", initNs=nsdict)
+        tempg = Graph()
+        tempg += g.triples( (subject, None, None) )
+        if createRelations:
+            num = random.randint(1, 4)
+            tempg.add( ( subject.s, SKOS.related, URIRef(config['fcrepo']['base'] + "related0" + str(num)) ) )
+        d = tempg.serialize(format="xml", initNs=nsdict)
+        response = requests.put(s, data=d, headers={"Content-type": "application/rdf+xml"})
+        count = count + 1
+        logResponse(s, response.status_code, count)
+        
+    
+
+parser = argparse.ArgumentParser(description = 'Ingest Test Utility')
+parser.add_argument('-c', '--config', default='config/general.conf', help='Configuration file path.')
+parser.add_argument('-l', '--limit', default='0', help='Limit number of resources to load.')
+parser.add_argument('-s', '--source', default='source-data/test.rdf', help='Source data.')
+parser.add_argument('task')
+
+args = parser.parse_args()
+
+try:
+    os.stat(args.config)
+except:
+    raise IOError('Could not read config file: {}' . format(args.config))
+
+config = configparser.ConfigParser()
+config.read(args.config)
+
+logging.basicConfig()
+if os.access(config['host']['log_config_file'], os.R_OK):
+    logging.config.fileConfig(config['host']['log_config_file'])
+logger = logging.getLogger(__name__)
+
+logger.info('Args: {}'.format(args))
+logger.info('Config file: {}'.format(config))
+
+count = 0
+st = datetime.datetime.now()
+starttime = strftime("%Y-%m-%d %H:%M:%S", gmtime())
+if args.task == "load":
+    insertResources("source-data/relations.rdf", False)
+    insertResources(args.source, True)
+    
+elif args.task == "clean":
+    deleteResources("source-data/relations.rdf")
+    deleteResources(args.source)
+        
+else:
+    print ()
+    print ("Invalid option")
+    print ()
+endtime = strftime("%Y-%m-%d %H:%M:%S", gmtime())
+et = datetime.datetime.now()
+
+timedelta = et - st
+
+logging.info("Task started at: " + starttime)
+logging.info("Task ended at: " + endtime)
+logging.info("Elapsed time: " + str(timedelta))
+logging.info("Number of resources processed: " + str(count))
+
+print ()
+print ("Task started at: " + starttime)
+print ("Task ended at: " + endtime)
+print ("Elapsed time: ", str(timedelta))
+print ("Number of resources processed: ", str(count))
+print ()
+
+sys.exit()
