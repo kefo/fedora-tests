@@ -94,5 +94,23 @@ var data = [
         "name": "Test 16",
         "description": "10000 records deleted (all DELETEs; time elapsed 0:33:58)",
         "jvmoptions": "-XX:+UseG1GC -XX:ConcGCThreads=5 -XX:MaxGCPauseMillis=400 -XX:ParallelGCThreads=20 -Xms4g -Xmx4g -XX:+DisableExplicitGC"
+    },
+    {
+        "directory": "test17",
+        "name": "Test 17",
+        "description": "18564 records ingested using combine WITHOUT triplestore route configured (all PUTS; all objects; time elapsed for entire combine run approx 1:45:00.00)",
+        "jvmoptions": "-XX:+UseG1GC -XX:ConcGCThreads=5 -XX:MaxGCPauseMillis=400 -XX:ParallelGCThreads=20 -Xms4g -Xmx4g -XX:+DisableExplicitGC"
+    },
+    {
+        "directory": "test18",
+        "name": "Test 18",
+        "description": "18564 records ingested using combine WITHOUT triplestore route configured (all PUTS; all objects; time elapsed for entire combine run approx 1:41:00.00)",
+        "jvmoptions": "-XX:+UseG1GC -XX:ConcGCThreads=5 -XX:MaxGCPauseMillis=400 -XX:ParallelGCThreads=20 -Xms4g -Xmx4g -XX:+DisableExplicitGC"
+    },
+    {
+        "directory": "test19",
+        "name": "Test 19",
+        "description": "18564 records ingested using combine WITH triplestore route configured (all PUTS; all objects; time elapsed for entire combine run approx 1:45:00.00)",
+        "jvmoptions": "-XX:+UseG1GC -XX:ConcGCThreads=5 -XX:MaxGCPauseMillis=400 -XX:ParallelGCThreads=20 -Xms4g -Xmx4g -XX:+DisableExplicitGC"
     }
 ];
