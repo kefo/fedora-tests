@@ -79,12 +79,12 @@ def insertResources(sourcefile, createRelations):
         #q = "CONSTRUCT { <" + s + "> ?p ?o } WHERE { <" + s + "> ?p ?o }"
         #d = g.query(q).serialize(format="xml", initNs=nsdict)
         tempg = Graph()
-        tempg += g.triples( (subject, None, None) )
+        tempg += g.triples( (subject.s, None, None) )
         if createRelations:
             num = random.randint(1, 4)
             tempg.add( ( subject.s, SKOS.related, URIRef(config['fcrepo']['base'] + "related0" + str(num)) ) )
-        d = tempg.serialize(format="xml", initNs=nsdict)
-        response = requests.put(s, data=d, headers={"Content-type": "application/rdf+xml"})
+        d = tempg.serialize(format="nt", initNs=nsdict)
+        response = requests.put(s, data=d, headers={"Content-type": "application/n-triples"})
         count = count + 1
         logResponse(s, response.status_code, count)
         
@@ -118,12 +118,33 @@ count = 0
 st = datetime.datetime.now()
 starttime = strftime("%Y-%m-%d %H:%M:%S", gmtime())
 if args.task == "load":
+    # Create the top-level container
+    s = config['fcrepo']['base']
+    response = requests.put(s)
+    count = count + 1
+    logResponse(s, response.status_code, count)
+    
+    # Add relations
     insertResources("source-data/relations.rdf", False)
+    
+    # Add resources
     insertResources(args.source, True)
     
 elif args.task == "clean":
-    deleteResources("source-data/relations.rdf")
+    # Delete resources
     deleteResources(args.source)
+    
+    # Delete relations
+    deleteResources("source-data/relations.rdf")
+    
+    # Remove the top-level container
+    s = config['fcrepo']['base']
+    response = requests.delete(s)
+    count = count + 1
+    logResponse(s, response.status_code, count)
+    response = requests.delete(s + "/fcr:tombstone")
+    count = count + 1
+    logResponse(s + "fcr:tombstone", response.status_code, count)
         
 else:
     print ()
